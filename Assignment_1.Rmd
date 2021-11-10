@@ -1,0 +1,176 @@
+---
+title: "Web Scraping Workshop"
+author: "Jihed Ncib"
+output:
+  html_document:
+    theme: readable
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+Web scraping is an important tool for data collection. In this workshop, I will give a general introduction on how to scrape and crawl websites and how to use loops. However, I will first go over some important aspects of HTML and the structure of web pages as well as some important (and maybe familiar for some of you) functions that will be required for this tutorial.
+Let's first load our packages
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+library(tidyverse)
+library(rvest)
+```
+# Important Functions
+data.frame() creates data frames, tightly coupled collections of variables which share many of the properties of matrices and of lists, used as the fundamental data structure by most of R's modeling software.\
+rbind() takes a sequence of vector, matrix or data-frame arguments and combine by columns or rows, respectively.\
+paste() / paste0() concatenate vectors after converting to character.\
+str_sub() takes a portion of a string and str_remove() removes a portion of a string.\
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+str_sub("Jihed", 1, 2)
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+str_remove("Jihed", "J")
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+paste("Jihed", "Ncib")
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+paste("Jihed", "Ncib", sep = "_")
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+paste0("Jihed", "Ncib")
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+month = "Nov"
+year = "2021"
+paste0(month, "-", year)
+```
+# FOR Loop
+A for-loop is a control flow statement for specifying iteration, which allows code to be executed repeatedly.
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+print("Monday")
+print("Tuesday")
+print("Wednesday")
+print("Thursday")
+print("Friday")
+print("Saturday")
+print("Sunday")
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+days = c("Monday", "Tuesday", "Wedndesday", "Thursday", "Friday", "Saturday", "Sunday")
+for (i in 1:7) {
+  print(days[i])
+}
+```
+# HTML: The front-end syntax
+Most, if not all, websites use some form of HTML. It is the default syntax language to design webpages along with CSS to edit the layout and Javascript to make dynamic pages.\
+Webpages are based on HTML elements. These are nodes written using a tag in the HTML document. "html, head, title, body, h2, p" are all elements because they are represented by tags.\
+Tags (or elements) are used to select which part of the webpage to scrape.\
+Examples: view-source:https://jihedncib.net/ \
+To start scraping, you first need to store the HTML code of the webpage in a variable. We do that by using read_html()
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+read_html("https://jihedncib.net/")
+```
+Then we look for the HTML tag or element that we want to select. We use html_nodes() to select the part of the webpage that we want to scrape.
+Let's try h3
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://jihedncib.net/"
+link %>% read_html() %>% html_nodes("h3")
+```
+Different types of elements can be scraped off a webpage. They can be text elements, tables, links, etc. To scrape text, the function html_text() is used.
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://jihedncib.net/"
+output = link %>% read_html() %>% html_nodes("h3") %>% html_text()
+```
+Stringr functions can be useful here to clean the output data: str_remove(), str_sub, etc.\
+What if we would like to scrape the links? They can be very useful, especially if you're scraping multiple pages.\
+The "a" tag and the "href" attribute are used to insert hyperlinks in HTML.\
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+link = "https://jihedncib.net/"
+output = link %>% read_html() %>% html_nodes("a") %>% html_attr("href")
+```
+Notice how this retrieves ALL the links on the webpage. What if I need only certain ones?\
+HTML IDs and classes are used to identify different sections and elements on a webpage. IDs should be preceded by # and classes by .\
+Let's take a look at the webpage code.\
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+link = "https://jihedncib.net/"
+output = link %>% read_html() %>% html_nodes(".elementor-post__title a") %>% html_attr("href")
+```
+# Selector Gadget
+It is very useful to have a broad undertsanding of how HTML tags and elements work. But there's a tool that we can use to select different elements of a webpage without having to go through all the code: https://chrome.google.com/webstore/detail/selectorgadget/mhjhnkcfbdhnjickkkdbjoemdmbfginb \
+Let's see how this works.\
+Example 2: https://www.ucd.ie/spire/about/phdcandidates/ \
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://www.ucd.ie/spire/about/phdcandidates/"
+link %>% read_html() %>% html_nodes("p:nth-child(1) strong") %>% html_text()
+```
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://www.ucd.ie/spire/about/phdcandidates/"
+link %>% read_html() %>% html_nodes(".table-wrapper a") %>% html_text()
+```
+# Scraping multiple pages
+'for' loops come into play when we need to scrape multiple pages in one call.\
+First, I'll need to examine the structure of the URL and see if there are any patterns (which is usually the case).\
+The first page needs to be scraped separately because its URL is usually different and you also need an initial data frame to add the rest of the data to.\
+Example 3: https://www.ucd.ie/spire/about/academicstaff/ \
+\
+In this example, we'll also see how to scrape multiple fields on a single page and use the seq() function.\
+Scraping the first page:\
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+link = "https://www.ucd.ie/spire/about/academicstaff/"
+name = link %>% read_html() %>% html_nodes("h3 a") %>% html_text()
+email = link %>% read_html() %>% html_nodes(".email") %>% html_text()
+faculty = data.frame(name, email, stringsAsFactors = FALSE)
+```
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+for (ucd in seq(from = 2, to = 5, by = 1)) {
+  link = paste0("https://www.ucd.ie/spire/about/academicstaff/", ucd, "/index.html")
+  name = link %>% read_html() %>% html_nodes("h3 a") %>% html_text()
+  email = link %>% read_html() %>% html_nodes(".email") %>% html_text()
+  temp = data.frame(name, email, stringsAsFactors = FALSE)
+  faculty = rbind(faculty, temp)
+  rm(temp)
+}
+```
+# Scraping a table
+html_table() is used to retrieve complete tables.\
+Example 4: https://arc-sos.state.al.us/cgi/corpmonth.mbr/output?s=126&year=2018&month=1&place=ALL&order=default&hld=&dir=&page=Y \
+Seeing a table doesn't necessarily mean that there's one. A table is a type of element in HTML and you need to see the table 'table' tag in the code. If it has an ID or a class, we use them. Otherwise, we don't specify any HTML nodes.\
+Let's examine this page.
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+link = "https://arc-sos.state.al.us/cgi/corpmonth.mbr/output?s=126&year=2018&month=1&place=ALL&order=default&hld=&dir=&page=Y"
+table = link %>% read_html() %>% html_table()
+```
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+link = "https://arc-sos.state.al.us/cgi/corpmonth.mbr/output?s=126&year=2018&month=1&place=ALL&order=default&hld=&dir=&page=Y"
+table = as.data.frame(table)
+```
+# Scraping data that is not on the specified webpage
+Sometimes, you need to scrape data on a parent page and a child page simultaneously. This is when html_attr() comes into play.
+Example 5: https://www.oireachtas.ie/en/debates/questions/ \
+For this workshop, I will filter the results to only see questions asked during the first week of July 2020:
+https://www.oireachtas.ie/en/debates/questions/?questionType=all&datePeriod=dates&fromDate=01%2F07%2F2020&toDate=07%2F07%2F2020&term=%2Fie%2Foireachtas%2Fhouse%2Fdail%2F33&departmentToggle=member&member=&department=&depFrom=&depTo=&viewBy=question \
+(Always examine the URLs when scraping multiple pages!)
+The first page is done separately:\
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://www.oireachtas.ie/en/debates/questions/?questionType=all&datePeriod=dates&fromDate=01%2F07%2F2020&toDate=07%2F07%2F2020&term=%2Fie%2Foireachtas%2Fhouse%2Fdail%2F33&departmentToggle=member&member=&department=&depFrom=&depTo=&viewBy=question"
+questlinks = link %>% read_html() %>% html_nodes(".u-btn-secondary") %>% html_attr("href")
+```
+Notice how the URLs don't contain the main domain? Let's try again.
+```{r, echo = TRUE, results = 'verbatim', message = FALSE}
+link = "https://www.oireachtas.ie/en/debates/questions/?questionType=all&datePeriod=dates&fromDate=01%2F07%2F2020&toDate=07%2F07%2F2020&term=%2Fie%2Foireachtas%2Fhouse%2Fdail%2F33&departmentToggle=member&member=&department=&depFrom=&depTo=&viewBy=question"
+questlinks = link %>% read_html() %>% html_nodes(".u-btn-secondary") %>% html_attr("href") %>% paste0("https://www.oireachtas.ie", .)
+```
+We now have the secondary links, let's retrieve the data for the first question of the first page:
+```{r, echo = TRUE, results = 'hide', message = FALSE}
+  td = questlinks[1] %>% read_html() %>% html_nodes("#pq_1 .c-avatar__name-link") %>% html_text()
+  question = questlinks[1] %>% read_html() %>% html_nodes("#pq_1 p") %>% html_text()
+  answer = questlinks[1] %>% read_html() %>% html_nodes(".speech .text") %>% html_text()
+  questions = data.frame(td, question, answer, stringsAsFactors = FALSE)
+```
+
+# Caveats
+- DDoS attacks.\
+- Robots.txt \
+https://www.washingtonpost.com/robots.txt \
+https://twitter.com/robots.txt \
+https://www.tripadvisor.com/robots.txt \
+- Sys.sleep()
